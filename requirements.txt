@@ -2,4 +2,3 @@ torch
 transformers
 pillow
 ollama
-
