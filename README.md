@@ -5,13 +5,13 @@ This project generates image captions using various vision-language models. It o
 
 It combines two popular approaches for running vision-language models: Hugging Face Transformers and Ollama. Hugging Face provides a wide variety of machine learning models with standardized interfaces through its "transformers" library. Ollama enables optimized local deployment of large language models with vision capabilities. By supporting both platforms, we can compare different model architectures and deployment approaches.
 
-These instructions were written for macOS (Sequoia) on a MacBook. While the general steps should apply to other platforms, some commands (e.g., those using Homebrew) may require adjustments for Linux or Windows.
+These instructions were written for macOS (Sequoia) on a MacBook. While the general steps should apply to other platforms, some commands (e.g. those using Homebrew) may require adjustments for Linux or Windows.
 
 ## Step 1: Install required tools
 
 Python 3.11 is required for compatibility with PyTorch. While newer Python versions are available, PyTorch does not fully support them yet. If you already have a newer Python version installed, you will need to install Python 3.11 alongside it.
 
-This project also uses `uv`, a fast Python package and dependency manager written in Rust. `uv` simplifies dependency resolution and creates isolated virtual environments, keeping your system Python installation clean and preventing version conflicts. While it’s possible to install dependencies globally, using a virtual environment ensures that each project has its own isolated setup, avoiding mismatches and ensuring reproducibility.
+This project also uses `uv`, a fast Python package and dependency manager written in Rust. `uv` simplifies dependency resolution and creates isolated virtual environments, keeping your system Python installation clean and preventing version conflicts.
 
 Let's install **Python 3.11** and **uv** using Homebrew:
 
@@ -69,7 +69,7 @@ Keep this service running in a separate terminal while using the captioning scri
 Make the script executable:
 
 ```bash
-chmod +x caption.py
+chmod +x caption
 ```
 
 Run the script using the local virtual environment:
@@ -85,7 +85,7 @@ Run the script using the local virtual environment:
 ./caption image.jpg --model git
 
 # Run multiple models
-./caption image.jpg --model flan llama-3b
+./caption image.jpg --model blip2-flan llama32-vision-3b
 
 # Get the output as JSON
 ./caption image.jpg --json
@@ -124,13 +124,13 @@ Available models:
 }
 ```
 
-The captions can be programmatically compared for consistency, combined to create a more accurate descriptions, or processed by another language model for translation or improvement.
+The captions can be compared for consistency, programmatically combined to create a more accurate description, or processed by another language model for translation or improvement.
 
 ## Adding new models
 
 Adding new models is straightforward. Open `caption.py` and look for the `MODELS` and `SETTINGS` sections near the top of the script. You can easily add additional Hugging Face or Ollama models in these sections. 
 
-If you have success with different or newer models, I’d love to hear from you! You can reach me at [dries@buytaert.net](mailto:dries@buytaert.net) or contribute by opening a ticket or pull request on GitHub.
+If you have success with different or newer models, I'd love to hear from you! You can reach me at [dries@buytaert.net](mailto:dries@buytaert.net) or contribute by opening a ticket or pull request on GitHub.
 
 ## Managing disk space
 
