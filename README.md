@@ -75,7 +75,7 @@ chmod +x caption
 Run the script using the local virtual environment:
 
 ```bash
-# Run all models on the provided image (default)
+# Run all models on the provided image
 ./caption image.jpg
 
 # Print a list of all available models
@@ -85,13 +85,16 @@ Run the script using the local virtual environment:
 ./caption image.jpg --model git
 
 # Run multiple models
-./caption image.jpg --model blip2-flan llama32-vision-3b
+./caption image.jpg --model blip2-flan llama32-vision-11b-q4
 
-# Get the output as JSON
-./caption image.jpg --json
+# Run all models on multiple files
+find . -name "*.jpg" -exec ./caption {} \;
+
+# Run all models on multiple files and combine the output into a single JSON file:
+find . -name "*.jpg" -exec ./caption {} \; | jq -s '{"results": .}' > captions.json
 ```
 
-**Note:** The first time you run the script, it will download the model data from Hugging Face and additional models from Ollama. This initial download may take some time depending on your internet connection. Subsequent runs will use the cached models and be much faster.
+**Note:** The first time you run the script, it will download the model data from Hugging Face and additional models from Ollama. This initial download is very large and may take some time depending on your internet connection. Subsequent runs will use the cached models and be much faster.
 
 Example output:
 
@@ -99,17 +102,17 @@ Example output:
 ./caption --list
 
 Available models:
-  vit-gpt2             - ViT-GPT2 (2021)
-  git                  - Microsoft GIT (2022)
-  blip                 - BLIP Large (2022)
-  blip2-opt            - BLIP-2 with OPT backbone (2023)
-  blip2-flan           - BLIP-2 with FLAN-T5 backbone (2023)
-  llama32-vision-3b    - Llama 3.2 Vision (3.2B, Q4 mixed) (2024)
-  llama32-vision-11b   - Llama 3.2 Vision (11B, Q8) (2024)
+  vit-gpt2                 - ViT-GPT2 (2021)
+  git                      - Microsoft GIT (2022)
+  blip                     - BLIP Large (2022)
+  blip2-opt                - BLIP-2 with OPT backbone (2023)
+  blip2-flan               - BLIP-2 with FLAN-T5 backbone (2023)
+  llama32-vision-11b-q4    - Llama 3.2 Vision (11B, Q4 mixed) (2024)
+  llama32-vision-11b-q8    - Llama 3.2 Vision (11B, Q8) (2024)
 ```
 
 ```bash
-./caption test-images/image-1.jpg --json
+./caption test-images/image-1.jpg
 {
   "image": "test-images/image-1.jpg",
   "captions": {
@@ -118,8 +121,8 @@ Available models:
     "blip2-opt": "A candle sits on top of a wooden table.",
     "blip2-flan": "A candle sits on a wooden table next to a backgammon board and a glass of wine.",
     "blip": "There is a lit candle sitting on top of a wooden table next to a game board and a glass of wine on the table.",
-    "llama32-vision-3b": "The image depicts a dimly lit room with a wooden table, featuring a backgammon board and two candles.",
-    "llama32-vision-11b": "This photograph captures a cozy, dimly lit room with a wooden table as its central focus."
+    "llama32-vision-11b-q4": "The image depicts a dimly lit room with a wooden table, featuring a backgammon board and two candles.",
+    "llama32-vision-11b-q8": "This photograph captures a cozy, dimly lit room with a wooden table as its central focus."
   }
 }
 ```
