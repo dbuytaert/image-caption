@@ -4,6 +4,7 @@ import time
 import argparse
 import json
 import sys
+import re
 from pathlib import Path
 import urllib.parse
 import requests
@@ -34,7 +35,7 @@ SETTINGS = {
         "temperature": 0.1,
     },
     "ollama": {
-        "prompt": "Complete this sentence: 'This image shows'. Describe the image in a single sentence under 140 characters.",
+        "prompt": "Complete this sentence: 'This image shows'. Describe the image in a single sentence under 150 characters.",
         "temperature": 0.1,
     },
 }
@@ -77,14 +78,7 @@ MODELS = {
         "description": "BLIP-2 with FLAN-T5 backbone",
         "date": "2023",
     },
-    "llama32-vision-11b-q4": {
-        "platform": "ollama",
-        "architecture": "llama3.2-vision",
-        "path": "llama3.2-vision",
-        "description": "Llama 3.2 Vision (11B, Q4 mixed)",
-        "date": "2024",
-    },
-    "llama32-vision-11b-q8": {
+    "llama32-vision-11b": {
         "platform": "ollama",
         "architecture": "llama3.2-vision",
         "path": "llama3.2-vision:11b-instruct-q8_0",
@@ -100,32 +94,26 @@ MODELS = {
     # },
 }
 
+import re
 
 def clean_caption(caption: str) -> str:
-    """Clean and format caption text"""
-    # Split into sentences
-    sentences = caption.split(".")
+    first_sentence = caption.split(".")[0].strip().lower()
+    # print(f"Original: {first_sentence}")
 
-    # Take only the first sentence
-    first_sentence = sentences[0].strip()
+    subjects = r"image|photo|photograph|picture|scene"
+    verbs = r"shows|showcases|depicts|displays|features|contains|presents"
 
-    # Remove "This image shows" prefix
-    prefix = "this image shows"
-    if first_sentence.lower().startswith(prefix):
-        first_sentence = first_sentence[len(prefix):].strip()
-       
-    # Remove extra whitespace and newlines
-    first_sentence = " ".join(first_sentence.split())
+    # Match "This is an image of..." at the start of the sentence
+    pattern1 = rf"^this is an? ({subjects}) of\s+"
+    first_sentence = re.sub(pattern1, "", first_sentence)
+    # print(f"After pattern #1: {first_sentence}")
 
-    # Ensure first letter is capitalized
-    first_sentence = first_sentence[0].upper() + first_sentence[1:]
+    # Match "This image shows..." or "The picture contains..." at the start
+    pattern2 = rf"^(this|the) ({subjects}) ({verbs})\s+"
+    first_sentence = re.sub(pattern2, "", first_sentence)
+    # print(f"After pattern #2: {first_sentence}")
 
-    # Ensure it ends with a period
-    if not first_sentence.endswith("."):
-        first_sentence = first_sentence + "."
-
-    return first_sentence.strip()
-
+    return first_sentence.strip().capitalize() + "."
 
 def load_image(image_path):
     """Load image from file or URL"""
@@ -230,65 +218,71 @@ def generate_caption(model_name: str, image_path: str) -> str:
 
     return result
 
-
 def run_model_in_process(model_name, image_path, queue):
     try:
+        start_time = time.time()
         result = generate_caption(model_name, image_path)
-        queue.put({model_name: result})
+        model_result = {
+            "caption": result,
+            "time": round(time.time() - start_time)
+        }
+        queue.put({model_name: model_result})
     except Exception as e:
-        queue.put({model_name: f"ERROR: {str(e)}"})
-
+        queue.put({model_name: {"caption": f"ERROR: {str(e)}"}})
 
 def main():
-    parser = argparse.ArgumentParser(
-        description="Generate image captions using various models"
-    )
-    group = parser.add_mutually_exclusive_group(required=True)
-    group.add_argument("--list", action="store_true", help="List all available models")
-    group.add_argument("image", nargs="?", help="Path to image file or URL")
+   parser = argparse.ArgumentParser(
+       description="Generate image captions using various models"
+   )
+   group = parser.add_mutually_exclusive_group(required=True)
+   group.add_argument("--list", action="store_true", help="List all available models")
+   group.add_argument("image", nargs="?", help="Path to image file or URL")
 
-    parser.add_argument(
-        "--model",
-        nargs="+",
-        choices=list(MODELS.keys()),
-        help="Specific model(s) to use. If not specified, all models will be used.",
-    )
-    args = parser.parse_args()
+   parser.add_argument(
+       "--model",
+       nargs="+",
+       choices=list(MODELS.keys()),
+       help="Specific model(s) to use. If not specified, all models will be used.",
+   )
+   parser.add_argument("--time", action="store_true", help="Include execution time in outut")
 
-    if args.list:
-        print("Available models:")
-        for name, info in MODELS.items():
-            print(f"  {name:24} - {info['description']} ({info['date']})")
-        sys.exit(0)
+   args = parser.parse_args()
 
-    # If no models specified, run all
-    models_to_run = args.model if args.model else MODELS.keys()
+   if args.list:
+       print("Available models:")
+       for name, info in MODELS.items():
+           print(f"  {name:20} - {info['description']} ({info['date']})")
+       sys.exit(0)
 
-    # Get filename from path or URL
-    image_name = (
-        Path(args.image).name
-        if not args.image.startswith(("http://", "https://"))
-        else Path(urllib.parse.urlparse(args.image).path).name
-    )
+   # If no models specified, run all
+   models_to_run = args.model if args.model else MODELS.keys()
+   
+   results = {
+       "image": args.image,
+       "captions": {}
+   }
 
-    results = {"image": args.image, "captions": {}}
+   # Each model runs in its own Process to ensure a clean memory state, optimal
+   # process isolation and avoid memory leaks. For now, we run all the models
+   # sequentially to prevent out-of-memory errors.
+   for model_name in models_to_run:
+       # Create a queue for getting results back from each child process
+       queue = Queue()
+       p = Process(target=run_model_in_process, args=(model_name, args.image, queue))
+       p.start()
 
-    # Each model runs in its own Process to ensure a clean memory state, optimal
-    # process isolation and avoid memory leaks. For now, we run all the models
-    # sequentially to prevent out-of-memory errors.
-    for model_name in models_to_run:
-        # Create a queue for getting results back from each child process
-        queue = Queue()
-        p = Process(target=run_model_in_process, args=(model_name, args.image, queue))
-        p.start()
+       # Wait for the process to complete before starting next one.
+       p.join()
 
-        # Wait for the process to complete before starting next one.
-        p.join()
+       # Get results from child process and add to results array
+       results["captions"].update(queue.get())
 
-        # Get results from child process and add it results array.
-        results["captions"].update(queue.get())
+   # Remove time if not requested
+   if not args.time:
+       for model in results["captions"].values():
+           model.pop("time", None)
 
-    print(json.dumps(results, indent=2))
+   print(json.dumps(results, indent=2))
 
 if __name__ == "__main__":
     main()
