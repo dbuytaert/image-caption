@@ -85,9 +85,9 @@ MODELS = {
         "description": "Llama 3.2 Vision (11B, Q8)",
         "date": "2024",
     },
-    # "llava:34b-v16-q8": {
+    # "llava-34b": {
     #   "platform": "ollama",
-    #   "architecture": "llava:34b",
+    #   "architecture": "llava",
     #   "path": "llava:34b-v1.6-q8_0",
     #   "description": "Llaa 34b (90B, Q8)",
     #   "date": "2024"
@@ -289,12 +289,17 @@ def main():
        # Get results from child process and add to results array
        results["captions"].update(queue.get())
 
-   # Remove time if not requested
+   # When time is not requested, flatten the JSON
    if not args.time:
-       for model in results["captions"].values():
-           model.pop("time", None)
-
-   print(json.dumps(results, indent=2))
+       flattened_results = {
+           "image": args.image,
+           "captions": {
+               model: data["caption"] for model, data in results["captions"].items()
+           }
+       }
+       print(json.dumps(flattened_results, indent=2))
+   else:
+       print(json.dumps(results, indent=2))
 
 if __name__ == "__main__":
     main()
