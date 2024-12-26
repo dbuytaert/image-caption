@@ -85,35 +85,47 @@ MODELS = {
         "description": "Llama 3.2 Vision (11B, Q8)",
         "date": "2024",
     },
-    # "llama32-vision-11b-fp16": {
-    #    "platform": "ollama",
-    #    "architecture": "llama3.2-vision",
-    #    "path": "llama3.2-vision:11b-instruct-fp16",
-    #    "description": "Llama 3.2 Vision (11B, FP16)",
-    #    "date": "2024",
+    # "llava:34b-v16-q8": {
+    #   "platform": "ollama",
+    #   "architecture": "llava:34b",
+    #   "path": "llava:34b-v1.6-q8_0",
+    #   "description": "Llaa 34b (90B, Q8)",
+    #   "date": "2024"
     # },
+    # "llama32-vision-90b": {
+    #   "platform": "ollama",
+    #   "architecture": "llama3.2-vision",
+    #   "path": "llama3.2-vision:90b-instruct-q8_0",
+    #   "description": "Llama 3.2 Vision (90B, Q8)",
+    #   "date": "2024"
+    # }
 }
 
-import re
-
 def clean_caption(caption: str) -> str:
+    # First remove any surrounding whitespace and both types of quotes (" and ')
+    caption = caption.strip().strip('"\'')
+    
+    # Extract first sentence and convert to lowercase for consistent processing
     first_sentence = caption.split(".")[0].strip().lower()
-    # print(f"Original: {first_sentence}")
-
+    
+    # Define patterns for image-related subjects and verbs
     subjects = r"image|photo|photograph|picture|scene"
     verbs = r"shows|showcases|depicts|displays|features|contains|presents"
-
+    
     # Match "This is an image of..." at the start of the sentence
     pattern1 = rf"^this is an? ({subjects}) of\s+"
     first_sentence = re.sub(pattern1, "", first_sentence)
-    # print(f"After pattern #1: {first_sentence}")
-
+    
     # Match "This image shows..." or "The picture contains..." at the start
-    pattern2 = rf"^(this|the) ({subjects}) ({verbs})\s+"
+    pattern2 = rf"^(?:this|the)\s*(?:{subjects})\s*(?:{verbs})\s+"
     first_sentence = re.sub(pattern2, "", first_sentence)
-    # print(f"After pattern #2: {first_sentence}")
-
-    return first_sentence.strip().capitalize() + "."
+    
+    # Final cleanup: strip spaces and both types of quotes (" and '), then capitalize
+    first_sentence = first_sentence.strip().strip('"\'')
+    if first_sentence:
+        first_sentence = first_sentence[0].upper() + first_sentence[1:]
+    
+    return first_sentence + "."
 
 def load_image(image_path):
     """Load image from file or URL"""

@@ -154,3 +154,19 @@ If you need to free up disk space later:
 ```bash
 ollama rm [model-name]
 ```
+
+## Testing
+
+The project includes unit tests for the caption cleaning functionality. To run the tests:
+
+```bash
+# Create and activate virtual environment
+uv venv
+source .venv/bin/activate  # On macOS/Linux
+
+# Install dependencies in the activated environment
+uv pip install -r requirements.txt
+
+# Run tests
+python3 -m unittest test_caption.py -v
+```
