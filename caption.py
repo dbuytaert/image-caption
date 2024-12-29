@@ -89,7 +89,7 @@ MODELS = {
     #   "platform": "ollama",
     #   "architecture": "llava",
     #   "path": "llava:34b-v1.6-q8_0",
-    #   "description": "Llaa 34b (90B, Q8)",
+    #   "description": "Llava 34b (90B, Q8)",
     #   "date": "2024"
     # },
     # "llama32-vision-90b": {

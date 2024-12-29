@@ -160,13 +160,13 @@ ollama rm [model-name]
 The project includes unit tests for the caption cleaning functionality. To run the tests:
 
 ```bash
-# Create and activate virtual environment
-uv venv
-source .venv/bin/activate  # On macOS/Linux
+# Create and activate a virtual environment
+uv venv --python=python3.11
+source .venv/bin/activate
 
-# Install dependencies in the activated environment
+# Install the dependencies in the activated environment
 uv pip install -r requirements.txt
 
-# Run tests
+# Run the tests
 python3 -m unittest test_caption.py -v
 ```
