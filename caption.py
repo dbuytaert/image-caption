@@ -24,81 +24,109 @@ from transformers import (
     BlipForConditionalGeneration,
 )
 
-# Settings for all models
-SETTINGS = {
-    "huggingface": {
-        "min_length": 25,
-        "max_length": 75,
-        "num_beams": 15,
-        "repetition_penalty": 1.4,
-        "do_sample": True,
-        "temperature": 0.1,
-    },
-    "ollama": {
-        "prompt": "Complete this sentence: 'This image shows'. Describe the image in a single sentence under 150 characters.",
-        "temperature": 0.1,
-    },
-}
-
 # Model configurations with release dates
 MODELS = {
     "vit-gpt2": {
-        "platform": "huggingface",
         "architecture": "vit",
         "path": "nlpconnect/vit-gpt2-image-captioning",
         "description": "ViT-GPT2",
         "date": "2021",
+        "settings": {
+            "min_length": 25,
+            "max_length": 75,
+            "num_beams": 15,
+            "repetition_penalty": 1.4,
+            "do_sample": True,
+            "temperature": 0.1,
+        }
     },
     "git": {
-        "platform": "huggingface",
         "architecture": "git",
         "path": "microsoft/git-large-textcaps",
         "description": "Microsoft GIT",
         "date": "2022",
+        "settings": {
+            "min_length": 25,
+            "max_length": 75,
+            "num_beams": 15,
+            "repetition_penalty": 1.4,
+            "do_sample": True,
+            "temperature": 0.1,
+        }
     },
     "blip": {
-        "platform": "huggingface",
         "architecture": "blip",
         "path": "Salesforce/blip-image-captioning-large",
         "description": "BLIP Large",
         "date": "2022",
         "prompt": "Describe the scene in detail:",
+        "settings": {
+            "min_length": 25,
+            "max_length": 75,
+            "num_beams": 15,
+            "repetition_penalty": 1.4,
+            "do_sample": True,
+            "temperature": 0.1,
+        }
     },
     "blip2-opt": {
-        "platform": "huggingface",
         "architecture": "blip2",
         "path": "Salesforce/blip2-opt-2.7b",
         "description": "BLIP-2 with OPT backbone",
         "date": "2023",
+        "settings": {
+            "min_length": 25,
+            "max_length": 75,
+            "num_beams": 15,
+            "repetition_penalty": 1.4,
+            "do_sample": True,
+            "temperature": 0.1,
+        }
     },
     "blip2-flan": {
-        "platform": "huggingface",
         "architecture": "blip2",
         "path": "Salesforce/blip2-flan-t5-xl",
         "description": "BLIP-2 with FLAN-T5 backbone",
         "date": "2023",
+        "settings": {
+            "min_length": 25,
+            "max_length": 75,
+            "num_beams": 15,
+            "repetition_penalty": 1.4,
+            "do_sample": True,
+            "temperature": 0.1,
+        }
     },
     "llama32-vision-11b": {
-        "platform": "ollama",
-        "architecture": "llama3.2-vision",
+        "architecture": "llama-vision",
         "path": "llama3.2-vision:11b-instruct-q8_0",
         "description": "Llama 3.2 Vision (11B, Q8)",
         "date": "2024",
+        "settings": {
+            "prompt": "Complete this sentence: 'This image shows'. Describe the image in a single sentence under 150 characters.",
+            "temperature": 0.1,
+        }
     },
-    # "llava-34b": {
-    #   "platform": "ollama",
-    #   "architecture": "llava",
-    #   "path": "llava:34b-v1.6-q8_0",
-    #   "description": "Llava 34b (90B, Q8)",
-    #   "date": "2024"
-    # },
-    # "llama32-vision-90b": {
-    #   "platform": "ollama",
-    #   "architecture": "llama3.2-vision",
-    #   "path": "llama3.2-vision:90b-instruct-q8_0",
-    #   "description": "Llama 3.2 Vision (90B, Q8)",
-    #   "date": "2024"
-    # }
+    "llava-13b": {
+        "architecture": "llava",
+        "path": "llava:13b",
+        "description": "Large Language and Vision Assistant (13B)",
+        "date": "2024",
+        "settings": {
+            "prompt": "Complete this sentence: 'This image shows'. Describe the image in a single sentence under 150 characters.",
+            "temperature": 0.1,
+        }
+    },
+    "llava-34b": {
+        "architecture": "llava",
+        "path": "llava:34b",
+        "description": "Large Language and Vision Assistant (34B)",
+        "date": "2024",
+        "settings": {
+            "prompt": "Complete this sentence: 'This image shows'. Describe the image in a single sentence under 150 characters.",
+            "temperature": 0.1,
+        }
+    }
 }
 
 def clean_caption(caption: str) -> str:
@@ -138,30 +166,26 @@ def load_image(image_path):
     except Exception as e:
         raise ValueError(f"Failed to load image: {e}")
 
-
 def generate_huggingface_caption(model_name: str, image_path: str) -> str:
     """Generate caption using Hugging Face model"""
     config = MODELS[model_name]
     device = torch.device("mps" if torch.backends.mps.is_available() else "cpu")
-    settings = SETTINGS.get("huggingface", {})
 
     img = load_image(image_path)
 
-    # print(f"Running HuggingFace model {config['architecture']} with settings {json.dumps(settings)} ...")
-
     try:
-        if config["architecture"] == "blip":
-            processor = AutoProcessor.from_pretrained(config["path"])
-            model = BlipForConditionalGeneration.from_pretrained(config["path"]).to(device)
-            inputs = processor(images=img, return_tensors="pt").to(device)
-            output_ids = model.generate(**inputs, **settings)
-            caption = processor.batch_decode(output_ids, skip_special_tokens=True)[0]
-            return clean_caption(caption)
-        elif config["architecture"] == "blip2":
+        if config["architecture"] == "blip2":
             processor = Blip2Processor.from_pretrained(config["path"])
             model = Blip2ForConditionalGeneration.from_pretrained(config["path"]).to(device)
             inputs = processor(images=img, return_tensors="pt").to(device)
-            output_ids = model.generate(**inputs, **settings)
+            output_ids = model.generate(**inputs, **config["settings"])
+            caption = processor.batch_decode(output_ids, skip_special_tokens=True)[0]
+            return clean_caption(caption)
+        elif config["architecture"] == "blip":
+            processor = AutoProcessor.from_pretrained(config["path"])
+            model = BlipForConditionalGeneration.from_pretrained(config["path"]).to(device)
+            inputs = processor(images=img, return_tensors="pt").to(device)
+            output_ids = model.generate(**inputs, **config["settings"])
             caption = processor.batch_decode(output_ids, skip_special_tokens=True)[0]
             return clean_caption(caption)
         elif config["architecture"] == "vit":
@@ -169,7 +193,7 @@ def generate_huggingface_caption(model_name: str, image_path: str) -> str:
             model = VisionEncoderDecoderModel.from_pretrained(config["path"])
             tokenizer = AutoTokenizer.from_pretrained(config["path"])
             inputs = processor(images=img, return_tensors="pt")
-            output_ids = model.generate(inputs.pixel_values, **settings)
+            output_ids = model.generate(inputs.pixel_values, **config["settings"])
             caption = tokenizer.decode(output_ids[0], skip_special_tokens=True)
             return clean_caption(caption)
         elif config["architecture"] == "git":
@@ -177,25 +201,22 @@ def generate_huggingface_caption(model_name: str, image_path: str) -> str:
             model = AutoModelForCausalLM.from_pretrained(config["path"]).to(device)
             inputs = processor(images=img, return_tensors="pt")
             inputs = {k: v.to(device) for k, v in inputs.items()}
-            output_ids = model.generate(**inputs, **settings)
+            output_ids = model.generate(**inputs, **config["settings"])
             caption = processor.batch_decode(output_ids, skip_special_tokens=True)[0]
             return clean_caption(caption)
         else:
             print(
-                f"Error: Unsupported architecture: {config['architecture']}",
+                f"Error: Unsupported model architecture: {config['architecture']}",
                 file=sys.stderr,
             )
     except Exception as e:
         return f"Error: {str(e)}"
 
-
 def generate_ollama_caption(model_name: str, image_path: str) -> str:
     """Generate caption using Ollama model"""
     config = MODELS[model_name]
-    settings = SETTINGS.get("ollama", {})
+    settings = config["settings"].copy()
     prompt = settings.pop("prompt", None)
-
-    # print(f"Running Ollama model {model_name} with settings: {json.dumps(settings)} ...")
 
     try:
         response = ollama.generate(
@@ -205,8 +226,6 @@ def generate_ollama_caption(model_name: str, image_path: str) -> str:
             options=settings,
         )
 
-        # print(f"Ollama response: {json.dumps(response.__dict__, indent=2)}")
-
         if not response.response:
             return f"Error: Model returned empty response (done_reason: {response.done_reason})"
 
@@ -215,15 +234,12 @@ def generate_ollama_caption(model_name: str, image_path: str) -> str:
     except Exception as e:
         return f"Error: {str(e)}"
 
-
 def generate_caption(model_name: str, image_path: str) -> str:
     """Generate caption using specified model."""
-    result = None
-
     if model_name not in MODELS:
         raise ValueError(f"Unknown model: {model_name}")
 
-    if MODELS[model_name]["platform"] == "ollama":
+    if MODELS[model_name]["architecture"] in ["llama-vision", "llava"]:
         result = generate_ollama_caption(model_name, image_path)
     else:
         result = generate_huggingface_caption(model_name, image_path)
@@ -243,63 +259,63 @@ def run_model_in_process(model_name, image_path, queue):
         queue.put({model_name: {"caption": f"ERROR: {str(e)}"}})
 
 def main():
-   parser = argparse.ArgumentParser(
-       description="Generate image captions using various models"
-   )
-   group = parser.add_mutually_exclusive_group(required=True)
-   group.add_argument("--list", action="store_true", help="List all available models")
-   group.add_argument("image", nargs="?", help="Path to image file or URL")
+    parser = argparse.ArgumentParser(
+        description="Generate image captions using various models"
+    )
+    group = parser.add_mutually_exclusive_group(required=True)
+    group.add_argument("--list", action="store_true", help="List all available models")
+    group.add_argument("image", nargs="?", help="Path to image file or URL")
 
-   parser.add_argument(
-       "--model",
-       nargs="+",
-       choices=list(MODELS.keys()),
-       help="Specific model(s) to use. If not specified, all models will be used.",
-   )
-   parser.add_argument("--time", action="store_true", help="Include execution time in outut")
+    parser.add_argument(
+        "--model",
+        nargs="+",
+        choices=list(MODELS.keys()),
+        help="Specific model(s) to use. If not specified, all models will be used.",
+    )
+    parser.add_argument("--time", action="store_true", help="Include execution time in output")
 
-   args = parser.parse_args()
+    args = parser.parse_args()
 
-   if args.list:
-       print("Available models:")
-       for name, info in MODELS.items():
-           print(f"  {name:20} - {info['description']} ({info['date']})")
-       sys.exit(0)
+    if args.list:
+        print("Available models:")
+        for name, info in MODELS.items():
+            print(f"  {name:20} - {info['description']} ({info['date']})")
+        sys.exit(0)
 
-   # If no models specified, run all
-   models_to_run = args.model if args.model else MODELS.keys()
-   
-   results = {
-       "image": args.image,
-       "captions": {}
-   }
+    # If no models specified, run all
+    models_to_run = args.model if args.model else MODELS.keys()
+    
+    results = {
+        "image": args.image,
+        "captions": {}
+    }
 
-   # Each model runs in its own Process to ensure a clean memory state, optimal
-   # process isolation and avoid memory leaks. For now, we run all the models
-   # sequentially to prevent out-of-memory errors.
-   for model_name in models_to_run:
-       # Create a queue for getting results back from each child process
-       queue = Queue()
-       p = Process(target=run_model_in_process, args=(model_name, args.image, queue))
-       p.start()
+    # Each model runs in its own Process to ensure a clean memory state, optimal
+    # process isolation and avoid memory leaks. For now, we run all the models
+    # sequentially to prevent out-of-memory errors.
+    for model_name in models_to_run:
+        # Create a queue for getting results back from each child process
+        queue = Queue()
+        p = Process(target=run_model_in_process, args=(model_name, args.image, queue))
+        p.start()
 
-       # Wait for the process to complete before starting next one.
-       p.join()
+        # Wait for the process to complete before starting next one.
+        p.join()
 
-       # Get results from child process and add to results array
-       results["captions"].update(queue.get())
+        # Get results from child process and add to results array
+        results["captions"].update(queue.get())
 
-   # When time is not requested, flatten the JSON
-   if not args.time:
-       flattened_results = {
-           "image": args.image,
-           "captions": {
-               model: data["caption"] for model, data in results["captions"].items()
-           }
-       }
-       print(json.dumps(flattened_results, indent=2))
-   else:
-       print(json.dumps(results, indent=2))
+    # When time is not requested, flatten the JSON
+    if not args.time:
+        flattened_results = {
+            "image": args.image,
+            "captions": {
+                model: data["caption"] for model, data in results["captions"].items()
+            }
+        }
+        print(json.dumps(flattened_results, indent=2))
+    else:
+        print(json.dumps(results, indent=2))
 
 if __name__ == "__main__":
     main()
