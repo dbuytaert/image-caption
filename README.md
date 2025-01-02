@@ -107,6 +107,7 @@ Example output:
 ```bash
 ./caption --list
 
+./caption --list
 Available models:
   vit-gpt2             - ViT-GPT2 (2021)
   git                  - Microsoft GIT (2022)
@@ -114,6 +115,8 @@ Available models:
   blip2-opt            - BLIP-2 with OPT backbone (2023)
   blip2-flan           - BLIP-2 with FLAN-T5 backbone (2023)
   llama32-vision-11b   - Llama 3.2 Vision (11B, Q8) (2024)
+  llava-13b            - Large Language and Vision Assistant (13B) (2024)
+  llava-34b            - Large Language and Vision Assistant (34B) (2024)
 ```
 
 ```bash
