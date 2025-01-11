@@ -97,13 +97,13 @@ MODELS = {
             "temperature": 0.1,
         }
     },
-    "llama32-vision-11b": {
-        "architecture": "llama-vision",
-        "path": "llama3.2-vision:11b-instruct-q8_0",
-        "description": "Llama 3.2 Vision (11B, Q8)",
+    "minicpm-v": {
+        "architecture": "llava",
+        "path": "minicpm-v",
+        "description": "MiniCPM-V",
         "date": "2024",
         "settings": {
-            "prompt": "Complete this sentence: 'This image shows'. Describe the image in a single sentence under 150 characters.",
+            "prompt": "Describe the image in a single sentence.",
             "temperature": 0.1,
         }
     },
@@ -113,8 +113,8 @@ MODELS = {
         "description": "Large Language and Vision Assistant (13B)",
         "date": "2024",
         "settings": {
-            "prompt": "Complete this sentence: 'This image shows'. Describe the image in a single sentence under 150 characters.",
-            "temperature": 0.1,
+            "prompt": "Complete this sentence: 'This image shows'. Describe the image in a single sentence.",
+            "temperature": 0.3,
         }
     },
     "llava-34b": {
@@ -123,29 +123,56 @@ MODELS = {
         "description": "Large Language and Vision Assistant (34B)",
         "date": "2024",
         "settings": {
-            "prompt": "Complete this sentence: 'This image shows'. Describe the image in a single sentence under 150 characters.",
+            "prompt": "Complete this sentence: 'This image shows'. Describe the image in a single sentence.",
             "temperature": 0.1,
         }
-    }
+    },
+    "llama32-vision-11b": {
+        "architecture": "llama-vision",
+        "path": "llama3.2-vision:11b-instruct-q8_0",
+        "description": "Llama 3.2 Vision (11B, Q8)",
+        "date": "2024",
+        "settings": {
+            "prompt": "Complete this sentence: 'This image shows'. Describe the image in a single sentence.",
+            "temperature": 0.3,
+        }
+    },
 }
 
+def format_error(error: Exception, context: str = None, done_reason: str = None) -> str:
+    """Standardize error message format across all model types"""
+    error_msg = f"Error: {str(error)}"
+    if context:
+        error_msg = f"Error in {context}: {str(error)}"
+    if done_reason:
+        error_msg += f" (done_reason: {done_reason})"
+    return error_msg
+
+def debug_log(message: str, data: str = None, debug: bool = False) -> None:
+    """Standardize debug output format"""
+    if debug:
+        print(f"\n--- {message} ---")
+        if data:
+            print(data)
+        print("-" * (len(message) + 8))
+        
 def clean_caption(caption: str) -> str:
     # First remove any surrounding whitespace and both types of quotes (" and ')
     caption = caption.strip().strip('"\'')
     
-    # Extract first sentence and convert to lowercase for consistent processing
-    first_sentence = caption.split(".")[0].strip().lower()
+    # Extract the first sentence:
+    first_sentence = caption.split(".")[0].strip()
     
     # Define patterns for image-related subjects and verbs
     subjects = r"image|photo|photograph|picture|scene"
-    verbs = r"shows|showcases|depicts|displays|features|contains|presents"
+    verbs = r"shows|showcases|depicts|displays|features|contains|captures|presents"
     
     # Match "This is an image of..." at the start of the sentence
-    pattern1 = rf"^this is an? ({subjects}) of\s+"
+    pattern1 = rf"^This is an? ({subjects}) of\s+"
     first_sentence = re.sub(pattern1, "", first_sentence)
     
     # Match "This image shows..." or "The picture contains..." at the start
-    pattern2 = rf"^(?:this|the)\s*(?:{subjects})\s*(?:{verbs})\s+"
+    pattern2 = rf"^(?:This|The)\s*(?:{subjects})\s*(?:{verbs})\s+"
     first_sentence = re.sub(pattern2, "", first_sentence)
     
     # Final cleanup: strip spaces and both types of quotes (" and '), then capitalize
@@ -166,7 +193,7 @@ def load_image(image_path):
     except Exception as e:
         raise ValueError(f"Failed to load image: {e}")
 
-def generate_huggingface_caption(model_name: str, image_path: str) -> str:
+def generate_huggingface_caption(model_name: str, image_path: str, debug: bool) -> str:
     """Generate caption using Hugging Face model"""
     config = MODELS[model_name]
     device = torch.device("mps" if torch.backends.mps.is_available() else "cpu")
@@ -180,14 +207,12 @@ def generate_huggingface_caption(model_name: str, image_path: str) -> str:
             inputs = processor(images=img, return_tensors="pt").to(device)
             output_ids = model.generate(**inputs, **config["settings"])
             caption = processor.batch_decode(output_ids, skip_special_tokens=True)[0]
-            return clean_caption(caption)
         elif config["architecture"] == "blip":
             processor = AutoProcessor.from_pretrained(config["path"])
             model = BlipForConditionalGeneration.from_pretrained(config["path"]).to(device)
             inputs = processor(images=img, return_tensors="pt").to(device)
             output_ids = model.generate(**inputs, **config["settings"])
             caption = processor.batch_decode(output_ids, skip_special_tokens=True)[0]
-            return clean_caption(caption)
         elif config["architecture"] == "vit":
             processor = ViTImageProcessor.from_pretrained(config["path"])
             model = VisionEncoderDecoderModel.from_pretrained(config["path"])
@@ -195,7 +220,6 @@ def generate_huggingface_caption(model_name: str, image_path: str) -> str:
             inputs = processor(images=img, return_tensors="pt")
             output_ids = model.generate(inputs.pixel_values, **config["settings"])
             caption = tokenizer.decode(output_ids[0], skip_special_tokens=True)
-            return clean_caption(caption)
         elif config["architecture"] == "git":
             processor = AutoProcessor.from_pretrained(config["path"])
             model = AutoModelForCausalLM.from_pretrained(config["path"]).to(device)
@@ -203,18 +227,17 @@ def generate_huggingface_caption(model_name: str, image_path: str) -> str:
             inputs = {k: v.to(device) for k, v in inputs.items()}
             output_ids = model.generate(**inputs, **config["settings"])
             caption = processor.batch_decode(output_ids, skip_special_tokens=True)[0]
-            return clean_caption(caption)
         else:
-            print(
-                f"Error: Unsupported model architecture: {config['architecture']}",
-                file=sys.stderr,
-            )
-    except Exception as e:
-        return f"Error: {str(e)}"
+            return f"Error: Unsupported model architecture: {config['architecture']}"
+            
+        debug_log(f"{model_name} caption", caption, debug)
+        return clean_caption(caption)
 
-def generate_ollama_caption(model_name: str, image_path: str) -> str:
-    """Generate caption using Ollama model"""
-    config = MODELS[model_name]
+    except Exception as e:
+        return format_error(e, f"Hugging Face model {model_name}")
+
+def generate_ollama_single_run(model_name: str, config: dict, image_path: str, debug: bool) -> str:
+    """Execute single run for Ollama models."""
     settings = config["settings"].copy()
     prompt = settings.pop("prompt", None)
 
@@ -227,29 +250,37 @@ def generate_ollama_caption(model_name: str, image_path: str) -> str:
         )
 
         if not response.response:
-            return f"Error: Model returned empty response (done_reason: {response.done_reason})"
+            return format_error("Empty response", done_reason=response.done_reason)
+
+        debug_log(f"Running {model_name}", response.response.strip(), debug)
 
         return clean_caption(response.response.strip())
 
     except Exception as e:
-        return f"Error: {str(e)}"
+        return format_error(e, "Ollama run")
 
-def generate_caption(model_name: str, image_path: str) -> str:
+def generate_ollama_caption(model_name: str, image_path: str, debug: bool) -> str:
+    """Generate caption using Ollama model."""
+    config = MODELS[model_name]
+    
+    return generate_ollama_single_run(model_name, config, image_path, debug)
+
+def generate_caption(model_name: str, image_path: str, debug: bool) -> str:
     """Generate caption using specified model."""
     if model_name not in MODELS:
         raise ValueError(f"Unknown model: {model_name}")
 
     if MODELS[model_name]["architecture"] in ["llama-vision", "llava"]:
-        result = generate_ollama_caption(model_name, image_path)
+        result = generate_ollama_caption(model_name, image_path, debug)
     else:
-        result = generate_huggingface_caption(model_name, image_path)
+        result = generate_huggingface_caption(model_name, image_path, debug)
 
     return result
 
-def run_model_in_process(model_name, image_path, queue):
+def run_model_in_process(model_name, image_path, queue, debug):
     try:
         start_time = time.time()
-        result = generate_caption(model_name, image_path)
+        result = generate_caption(model_name, image_path, debug)
         model_result = {
             "caption": result,
             "time": round(time.time() - start_time)
@@ -273,6 +304,7 @@ def main():
         help="Specific model(s) to use. If not specified, all models will be used.",
     )
     parser.add_argument("--time", action="store_true", help="Include execution time in output")
+    parser.add_argument("--debug", action="store_true", help="Show detailed debug output for multi-run models")
 
     args = parser.parse_args()
 
@@ -284,7 +316,7 @@ def main():
 
     # If no models specified, run all
     models_to_run = args.model if args.model else MODELS.keys()
-    
+
     results = {
         "image": args.image,
         "captions": {}
@@ -296,7 +328,7 @@ def main():
     for model_name in models_to_run:
         # Create a queue for getting results back from each child process
         queue = Queue()
-        p = Process(target=run_model_in_process, args=(model_name, args.image, queue))
+        p = Process(target=run_model_in_process, args=(model_name, args.image, queue, args.debug))
         p.start()
 
         # Wait for the process to complete before starting next one.
