@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 import os
 import json
 import time
@@ -29,20 +31,51 @@ def get_image_metadata(image_path):
         print(f"❌ API error fetching metadata for {image_path}: {e}")
         return None
 
-def generate_alt_text(image_path, model=DEFAULT_MODEL):
-    """Generate alt-text for an image using caption2.py."""
+def generate_alt_text(image_path, model=DEFAULT_MODEL, album=None, title=None, caption=None, additional_context=None):
+    """Generate alt-text for an image using caption.py."""
     try:
-        result = subprocess.run(["./caption2.py", str(image_path), "--model", model],
-                                capture_output=True, text=True, check=True)
+        cmd = ["./caption.py", str(image_path), "--model", model]
+        
+        # Build context from available metadata
+        context_parts = []
+        
+        # Use provided album or extract from path
+        final_album = album if album else image_path.parent.name.replace("-", " ").title()
+        context_parts.append(f"Album: {final_album}")
+        
+        if title:
+            context_parts.append(f"Title: {title}")
+        if caption:
+            context_parts.append(f"Caption: {caption}")
+        if additional_context:
+            context_parts.append(f"Additional context: {additional_context}")
+            
+        if context_parts:
+            context = ". ".join(context_parts)
+            cmd.extend(["--context", context])
+            
+        #print("Running command:")
+        #print(f"  {' '.join(cmd)}")
+            
+        result = subprocess.run(cmd, capture_output=True, text=True, check=True)
+        
+        #print("\nDebug: Raw stdout:")
+        #print(result.stdout)
+                
         output = json.loads(result.stdout)
         alt_text = output.get("captions", {}).get(model, "Alt-text generation failed")
+        
         if "Error" in alt_text or "error" in alt_text:
             print(f"❌ Alt-text generation error: {alt_text}")
             return f"Error: {alt_text}"
         
         return alt_text
+        
     except (subprocess.CalledProcessError, json.JSONDecodeError) as e:
-        print(f"❌ Alt-text generation subprocess error: {e}")
+        print(f"❌ Alt-text generation subprocess error: {str(e)}")
+        print("\nDebug: Full command output:")
+        print("stdout:", result.stdout if 'result' in locals() else "No stdout")
+        print("stderr:", result.stderr if 'result' in locals() else "No stderr")
         return f"Error: {e}"
 
 def generate_title(image_path, model=DEFAULT_MODEL):
@@ -117,7 +150,7 @@ def update_image_metadata(image_path, title, new_alt_text=None, new_title=None):
     except requests.RequestException as e:
         print(f"  ❌ Error updating {image_name}: {e}")
 
-def process_directory(directory, model=DEFAULT_MODEL):
+def process_directory(directory, model=DEFAULT_MODEL, additional_context=None):
     """Process all images in a given directory."""
     directory_path = BASE_DIR / directory
     if not directory_path.exists() or not directory_path.is_dir():
@@ -129,16 +162,17 @@ def process_directory(directory, model=DEFAULT_MODEL):
     print(f"Found {total_images} images to process")
     
     for idx, image_path in enumerate(image_paths, 1):
-        album_name = image_path.parent.name
+        album = image_path.parent.name
         image_name = image_path.stem
-        print(f"\n[{idx}/{total_images}] 🔗 Image: {BASE_URL}{album_name}/{image_name}")
+        print(f"\n[{idx}/{total_images}] 🔗 Image: {BASE_URL}{album}/{image_name}")
         
         metadata = get_image_metadata(image_path)
         if not metadata:
             continue
         
-        alt_text = metadata.get("alt", "").strip()
         title = metadata.get("title", "").strip()
+        caption = metadata.get("caption", "").strip()
+        alt_text = metadata.get("alt", "").strip()
         verified = metadata.get("verified")
         
         if verified == 1:
@@ -151,14 +185,24 @@ def process_directory(directory, model=DEFAULT_MODEL):
         new_alt_text = None
         new_title = None
 
-        if not alt_text:
-            new_alt_text = generate_alt_text(image_path, model)
-            if "Error" in new_alt_text:
-                print(f"❌ Alt-text generation failed, exiting.")
-                return
-            print(f"  🟢 AI-suggested alt-text: {new_alt_text}")
-        else:
-            print(f"  ℹ️ Keeping existing alt-text: {alt_text}")
+        # Generate alt-text regardless of whether caption exists
+        # Use caption as context but don't skip alt-text generation
+        new_alt_text = generate_alt_text(
+            image_path, 
+            model=model,
+            album=album,
+            title=title,
+            caption=caption,
+            additional_context=additional_context
+        )
+        if "Error" in new_alt_text:
+            print(f"❌ Alt-text generation failed, exiting.")
+            return
+        print(f"  🟢 AI-suggested alt-text: {new_alt_text}")
+        
+        # Show existing caption for reference
+        if caption:
+            print(f"  ℹ️ Existing caption (for context only): {caption}")
 
         if title:
             fixed_title = fix_title_case(title)
@@ -167,11 +211,8 @@ def process_directory(directory, model=DEFAULT_MODEL):
                 print(f"  🟢 AI-suggested title: {new_title}")
             else:
                 print(f"  ℹ️ Keeping existing title: {title}")
-        else:
-            print(f"    ⚠️ No title found")
-            return
 
-        # Only update and show save message if there are actual changes
+        # Only update the photo if there are actual changes
         if new_alt_text or new_title:
             update_image_metadata(image_path, title, new_alt_text, new_title)
         
@@ -181,9 +222,10 @@ def main():
     parser = argparse.ArgumentParser(description="Generate and update image alt-texts and titles.")
     parser.add_argument("directory", help="Directory of images to process (relative to BASE_DIR)")
     parser.add_argument("--model", default=DEFAULT_MODEL, help="AI model for alt-text generation")
+    parser.add_argument("--context", help="Additional context to include when generating alt-text")
     args = parser.parse_args()
     
-    process_directory(args.directory, args.model)
+    process_directory(args.directory, args.model, args.context)
 
 if __name__ == "__main__":
     main()

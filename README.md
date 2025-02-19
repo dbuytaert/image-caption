@@ -17,32 +17,6 @@ This Python script generates image captions using different large language model
    pip install -U uv
    ```
 
-2. Install llm and dependencies in a new virtual environment:
-   ```bash
-   uv venv                     # Create virtual environment
-   source .venv/bin/activate   # Activate it (Unix/macOS)
-   uv pip install llm pyyaml   # Install packages
-   ```
-
-Perfect! Now we're using the llm from our virtual environment at `/Users/dries/Projects/image-caption/.venv/bin/llm`.
-
-Let me update our installation instructions to be explicit about verifying the correct path:
-
-# Prerequisites
-
-1. Python 3.x
-2. Ollama (for local models):
-   ```bash
-   brew install ollama
-   ```
-
-# Installation steps
-
-1. Install uv:
-   ```bash
-   pip install -U uv
-   ```
-
 2. Create and activate virtual environment:
    ```bash
    uv venv                     # Create virtual environment
@@ -117,23 +91,30 @@ llm keys set mistral
 
 List available models:
 ```bash
-./caption2.py --list
+./caption.py --list
 ```
 
 Generate captions using all models:
 ```bash
-./caption2.py path/to/image.jpg
+./caption.py path/to/image.jpg
 ```
 
 Use specific models:
 ```bash
-./caption2.py path/to/image.jpg --model llava-13b llama-vision
+./caption.py path/to/image.jpg --model chatgpt-4o-latest pixtral-12b
+```
+
+Add context to improve caption accuracy:
+```bash
+./caption.py path/to/image.jpg --context "Photo taken at DrupalCon Barcelona 2024"
+./caption.py path/to/image.jpg --context "Location: Isle of Skye, Scotland"
 ```
 
 Additional options:
 ```bash
---time    # Include execution time in output
---debug   # Show detailed debug information
+--context  # Add contextual information to improve caption accuracy
+--time     # Include execution time in output
+--debug    # Show detailed debug information
 ```
 
 ## Output format

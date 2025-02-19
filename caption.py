@@ -134,7 +134,39 @@ def verify_image_path(image_path: str) -> bool:
         return False
     return True
 
-def run_llm_command(image_path: str, model_config: dict, debug: bool = False) -> dict:
+def process_image(image_path: str, models_to_use: dict, models_to_run: list, 
+                args: argparse.Namespace) -> dict:
+    """Process an image with specified models sequentially."""
+    start_time = time.time()
+    
+    if args.debug:
+        print(f"\nRunning caption generation for {len(models_to_run)} models...")
+    
+    results = {
+        "image": image_path,
+        "captions": {}
+    }
+    
+    for model_name in models_to_run:
+        model_config = models_to_use[model_name]
+        result = run_llm_command(image_path, model_config, args.context, args.debug)
+        
+        if args.time:
+            results["captions"][model_name] = result
+        else:
+            results["captions"][model_name] = result["caption"]
+        
+        # Small delay between models to allow resources to be released
+        time.sleep(1)
+    
+    if args.debug:
+        total_time = round(time.time() - start_time, 1)
+        print("\n" + "="*80)
+        print(f"Total execution time: {total_time}s\n")
+    
+    return results
+
+def run_llm_command(image_path: str, model_config: dict, context: str = None, debug: bool = False) -> dict:
     """Run llm command for a specific model and return the result.
     
     Uses subprocess instead of the Python API for model execution because:
@@ -153,8 +185,13 @@ def run_llm_command(image_path: str, model_config: dict, debug: bool = False) ->
         # Add attachment for image
         cmd.extend(["-a", str(image_path)])
         
-        # Add prompt
-        cmd.append(model_config["prompt"])
+        # Build prompt with context if provided
+        prompt = model_config["prompt"]
+        if context:
+            prompt = f"Consider this context before analyzing the image: {context}\n\n{prompt}"
+        
+        # Add prompt to command
+        cmd.append(prompt)
         
         # Add any model-specific settings
         if "settings" in model_config:
@@ -162,9 +199,32 @@ def run_llm_command(image_path: str, model_config: dict, debug: bool = False) ->
                 cmd.extend(["-o", key, str(value)])
         
         if debug:
-            print(f"\nRunning command: {' '.join(cmd)}")
+            print("\n" + "="*80)
+            print(f"Model: {model_config['model']}")
+            print(f"Image: {image_path}")
+            print("-"*80)
+            
+            # Build and show the exact command with settings
+            settings_str = ""
+            if "settings" in model_config:
+                settings_str = " " + " ".join(f"-o {k} {v}" for k, v in model_config["settings"].items())
+            print(f"Command:")
+            print(f"  llm -m {model_config['model']} -a {image_path}{settings_str}")
+            print("-"*80)
+            
+            print("Prompt details:")
+            if context:
+                print("  Context provided:")
+                print(f"    {context}")
+            if "settings" in model_config:
+                print("  Settings:")
+                for key, value in model_config["settings"].items():
+                    print(f"    {key}: {value}")
+            print("-"*80)
         
         result = subprocess.run(cmd, capture_output=True, text=True)
+        
+        execution_time = round(time.time() - start_time, 1)
         
         if result.returncode != 0:
             raise subprocess.CalledProcessError(
@@ -172,16 +232,17 @@ def run_llm_command(image_path: str, model_config: dict, debug: bool = False) ->
             )
         
         raw_caption = result.stdout.strip()
-        if debug:
-            print(f"Raw output:\n{raw_caption}\n")
-        
         caption = clean_caption(raw_caption)
+        
         if debug:
-            print(f"Cleaned caption:\n{caption}\n")
+            print(f"Generated caption ({execution_time}s):")
+            print(f"  Raw: {raw_caption}")
+            print(f"  Clean: {caption}")
+            print("="*80)
         
         return {
             "caption": caption,
-            "time": round(time.time() - start_time)
+            "time": execution_time
         }
         
     except subprocess.CalledProcessError as e:
@@ -193,35 +254,6 @@ def run_llm_command(image_path: str, model_config: dict, debug: bool = False) ->
         if debug:
             print(error_msg, file=sys.stderr)
         return {"caption": error_msg}
-
-def process_image(image_path: str, models_to_use: dict, models_to_run: list, 
-                args: argparse.Namespace) -> dict:
-    """Process an image with specified models sequentially."""
-    results = {
-        "image": image_path,
-        "captions": {}
-    }
-    
-    for model_name in models_to_run:
-        if args.debug:
-            print(f"\nProcessing with {model_name}...")
-        
-        model_config = models_to_use[model_name]
-        result = run_llm_command(image_path, model_config, args.debug)
-        
-        if args.time:
-            results["captions"][model_name] = result
-        else:
-            results["captions"][model_name] = result["caption"]
-            
-        # Print intermediate results if debugging
-        if args.debug:
-            print(f"Result from {model_name}:", result["caption"])
-        
-        # Small delay between models to allow resources to be released
-        time.sleep(1)
-    
-    return results
 
 def main():
     # Load models with status information
@@ -241,6 +273,11 @@ def main():
     )
     parser.add_argument("--time", action="store_true", help="Include execution time in output")
     parser.add_argument("--debug", action="store_true", help="Show debug info (see README.md)")
+    parser.add_argument(
+        "--context",
+        type=str,
+        help="Additional context to help generate more accurate captions (e.g., title, location, date)"
+    )
     
     args = parser.parse_args()
     
