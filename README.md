@@ -17,16 +17,19 @@ This Python script generates image captions using different large language model
    pip install -U uv
    ```
 
-2. Create and activate virtual environment:
+2. Create a virtual environment:
    ```bash
-   uv venv                     # Create virtual environment
-   source .venv/bin/activate   # Activate it (Unix/macOS)
+   uv venv 
    ```
 
 3. Install llm and verify path:
    ```bash
-   uv pip install llm pyyaml   # Install packages
-   which llm                   # Should show path in .venv/bin/llm
+   uv pip install llm pyyaml requests   # Install packages
+   ```
+
+4. Activate the virtual environment:
+   ```bash
+   source .venv/bin/activate
    ```
 
 4. Install LLM plugins:
@@ -75,17 +78,23 @@ llm keys set mistral
 
 ## Supported models
 
+This tool supports all vision and multi-modal models available through the `llm` CLI tool. The `models.yaml` file configures model-specific parameters like prompts, temperature and token limits. While several models are pre-configured, you can add any model supported by `llm` by adding its configuration to `models.yaml`. 
+
 ### Cloud models
-- Claude 3 Sonnet (Anthropic)
-- GPT-4 Vision (OpenAI)
-- Pixtral 12B (Mistral)
-- Pixtral Large (Mistral)
+
+- Claude 3 Sonnet (Anthropic) - anthropic/claude-3-sonnet-20240229
+- GPT-4 Vision (OpenAI) - chatgpt-4o-latest
+- Pixtral 12B (Mistral) - mistral/pixtral-12b-latest
+- Pixtral Large (Mistral) - mistral/pixtral-large-latest
 
 ### Local models (via Ollama)
-- LLaVA 13B and 34B
-- LLaVA Llama3
-- Llama 3.2 Vision (11B)
-- MiniCPM-V
+
+- LLaVA 13B - llava:13b
+- LLaVA 34B - llava:34b
+- LLaVA Llama3 - llava-llama3
+- Llama 3.2 Vision (11B) - llama3.2-vision:11b-instruct-q8_0
+- MiniCPM-V - minicpm-v
+
 
 ## Usage
 
