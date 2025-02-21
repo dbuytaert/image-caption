@@ -110,14 +110,23 @@ def generate_title(image_path, model=DEFAULT_MODEL):
         print(f"❌ LLM error: {e}")
         print(f"   Stderr: {e.stderr}")
         return f"Error: {e}"
-
-def fix_title_case(title):
-    """Fix title case using sentence case (first word and proper nouns only)."""
-    if not title:
-        return title
-        
-    prompt = f"Convert this title to sentence case and don't output anything else: {title}"
     
+def format_title(title):
+    """Format title using sentence case, proper nouns, and connecting words."""
+        
+    prompt = f"""Convert this title to sentence case: "{title}"
+Tasks:
+1. Keep all nouns from the original title; don't add new nouns
+2. Capitalize first word and proper nouns (people, places, brands, events)
+3. Add connecting words if needed (a, an, the, at, in, on, with, and, or)
+
+Examples:
+"xbox party richard andy" -> "Xbox party with Richard and Andy"
+"sunset eiffel tower" -> "Sunset at the Eiffel Tower"
+"mom dad garden" -> "Mom and Dad in the garden"
+
+Output title only."""
+
     try:
         result = subprocess.run(
             ["llm", "prompt", "-m", "chatgpt-4o-latest", "-s", "0", prompt],
@@ -125,20 +134,22 @@ def fix_title_case(title):
             text=True,
             check=True
         )
-        fixed_title = result.stdout.strip()
+
+        # Remove surrounding quotes and whitespace
+        formatted_title = result.stdout.strip().strip('"\'')
         
-        if not fixed_title or len(fixed_title.split()) != len(title.split()):
-            print(f"⚠️ Invalid output: {fixed_title}")
+        if not formatted_title:
+            print(f"❌ Empty output from AI")
             return title
             
-        return fixed_title
+        return formatted_title
         
     except subprocess.CalledProcessError as e:
         print(f"❌ LLM error: {e}")
         print(f"   Stderr: {e.stderr}")
         return title
 
-def update_image_metadata(image_path, title, new_alt_text=None, new_title=None):
+def update_image_metadata(image_path, alt_text=None, title=None):
     """Update the website with new metadata if provided."""
     album_name = image_path.parent.name
     image_name = image_path.stem
@@ -150,10 +161,10 @@ def update_image_metadata(image_path, title, new_alt_text=None, new_title=None):
     
     payload = {"verified": 0}
     
-    if new_alt_text:
-        payload["alt"] = new_alt_text
-    if new_title:
-        payload["title"] = new_title
+    if alt_text:
+        payload["alt"] = alt_text
+    if title:
+        payload["title"] = title
     
     try:
         response = requests.patch(url, headers=headers, json=payload)
@@ -225,17 +236,16 @@ def process_directory(directory, model=DEFAULT_MODEL, notes=None):
         print(f"  🟢 AI-suggested alt-text: {new_alt_text}")
         
         if title:
-            fixed_title = fix_title_case(title)
-            if fixed_title != title:
-                new_title = fixed_title
-                print(f"  🟢 AI-suggested title: {new_title}")
+            formatted_title = format_title(title)
+            if formatted_title != title:
+                print(f"  🟢 AI-suggested title: {formatted_title}")
             else:
                 print(f"  ℹ️ Keeping existing title: {title}")
 
         # Only update the photo if there are actual changes
-        if new_alt_text or new_title:
-            update_image_metadata(image_path, title, new_alt_text, new_title)
-        
+        if new_alt_text or formatted_title != title:
+           update_image_metadata(image_path, new_alt_text, formatted_title)
+            
         time.sleep(DELAY_BETWEEN_REQUESTS)
 
 def main():
