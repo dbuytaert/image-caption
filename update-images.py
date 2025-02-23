@@ -185,7 +185,8 @@ def process_directory(directory, model=DEFAULT_MODEL, notes=None):
         print(f"❌ Directory {directory_path} does not exist.")
         return
     
-    image_paths = list(directory_path.glob("*.jpg"))
+    image_paths = list(directory_path.glob("*.jpg")) + list(directory_path.glob("*.png")) + list(directory_path.glob("*.gif"))
+    
     total_images = len(image_paths)
     print(f"Found {total_images} images to process")
     
