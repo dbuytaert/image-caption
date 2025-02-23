@@ -6,10 +6,13 @@ import subprocess
 import sys
 import re
 import yaml
+from PIL import Image
 from pathlib import Path
 import time
 from collections import defaultdict
 import sys
+from tempfile import gettempdir
+
 sys.path.append('/opt/homebrew/lib/python3.12/site-packages')
 
 def load_models():
@@ -134,8 +137,25 @@ def verify_image_path(image_path: str) -> bool:
         return False
     return True
 
-def process_image(image_path: str, models_to_use: dict, models_to_run: list, 
-                args: argparse.Namespace) -> dict:
+def resize_image(image_path: str, debug: bool = False, max_dimension: int = 1024) -> str:
+    """Return path to a resized image for LLM processing."""
+    path = Path(image_path)
+    with Image.open(path) as img:
+        # Return original path if image is small enough
+        if max(img.size) <= max_dimension:
+            return image_path
+            
+        # Resize while preserving aspect ratio
+        img.thumbnail((max_dimension, max_dimension))
+        
+        # Create temp file path with original extension
+        temp_path = Path(gettempdir()) / f"resized-llm-image{path.suffix}"
+        
+        # Save resized image to temp location
+        img.save(temp_path, optimize=True)
+        return str(temp_path)
+    
+def process_image(image_path: str, models_to_use: dict, models_to_run: list,  args: argparse.Namespace) -> dict:
     """Process an image with specified models sequentially."""
     start_time = time.time()
     
@@ -147,9 +167,12 @@ def process_image(image_path: str, models_to_use: dict, models_to_run: list,
         "captions": {}
     }
     
+    # Resize large images to reduce upload bandwidth to cloud LLMs
+    small_image = resize_image(image_path, args.debug)
+    
     for model_name in models_to_run:
         model_config = models_to_use[model_name]
-        result = run_llm_command(image_path, model_config, args.context, args.debug)
+        result = run_llm_command(small_image, model_config, args.context, args.debug)
         
         if args.time:
             results["captions"][model_name] = result

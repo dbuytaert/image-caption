@@ -13,7 +13,7 @@ BASE_DIR = Path("/Users/dries/Dropbox/Personal/Website/images")
 BASE_URL = "https://dri.es/album/"
 AUTH_TOKEN = os.getenv("AUTH_TOKEN")
 DEFAULT_MODEL = "chatgpt-4o-latest"
-DELAY_BETWEEN_REQUESTS = 5  # seconds
+DELAY_BETWEEN_REQUESTS = 2  # seconds
 
 def get_image_metadata(image_path):
     """Fetch metadata for an image from the website."""
@@ -190,6 +190,8 @@ def process_directory(directory, model=DEFAULT_MODEL, notes=None):
     print(f"Found {total_images} images to process")
     
     for idx, image_path in enumerate(image_paths, 1):
+        time.sleep(DELAY_BETWEEN_REQUESTS)
+
         album = image_path.parent.name
         image_name = image_path.stem
         print(f"\n[{idx}/{total_images}] 🔗 Image: {BASE_URL}{album}/{image_name}")
@@ -246,8 +248,6 @@ def process_directory(directory, model=DEFAULT_MODEL, notes=None):
         if new_alt_text or formatted_title != title:
            update_image_metadata(image_path, new_alt_text, formatted_title)
             
-        time.sleep(DELAY_BETWEEN_REQUESTS)
-
 def main():
     parser = argparse.ArgumentParser(description="Generate and update image alt-texts and titles.")
     parser.add_argument("directory", help="Directory of images to process (relative to BASE_DIR)")
