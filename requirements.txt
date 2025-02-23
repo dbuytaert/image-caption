@@ -1,5 +1,5 @@
-torch
-transformers
+llm
 pillow
 ollama
-
+pyyaml 
+requests

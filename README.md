@@ -24,7 +24,7 @@ This Python script generates image captions using different large language model
 
 3. Install llm and verify path:
    ```bash
-   uv pip install llm pyyaml requests   # Install packages
+   uv pip install -r requirements.txt
    ```
 
 4. Activate the virtual environment:
