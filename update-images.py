@@ -7,6 +7,10 @@ import subprocess
 import requests
 from pathlib import Path
 import argparse
+from dotenv import load_dotenv
+
+# Load environment variables from .env file if present
+load_dotenv()
 
 # Configuration
 BASE_DIR = Path("/Users/dries/Dropbox/Personal/Website/images")
@@ -172,13 +176,14 @@ def update_image_metadata(image_path, alt_text=None, title=None):
     except requests.RequestException as e:
         print(f"  ❌ Error updating {image_name}: {e}")
 
-def process_directory(directory, model=DEFAULT_MODEL, notes=None):
+def process_directory(directory, model=DEFAULT_MODEL, notes=None, force=False):
     """Process all images in a given directory.
     
     Args:
         directory: Subdirectory within BASE_DIR to process
         model: AI model to use for generation
         notes: Additional information to include as context
+        force: If True, process all images regardless of verified status
     """
     directory_path = BASE_DIR / directory
     if not directory_path.exists() or not directory_path.is_dir():
@@ -206,7 +211,7 @@ def process_directory(directory, model=DEFAULT_MODEL, notes=None):
         alt_text = metadata.get("alt", "").strip()
         verified = metadata.get("verified")
         
-        if verified == 1:
+        if verified == 1 and not force:
             if title:
                 print(f"  💠 Skipped verified title: {title}")
             if alt_text:
@@ -254,9 +259,14 @@ def main():
     parser.add_argument("directory", help="Directory of images to process (relative to BASE_DIR)")
     parser.add_argument("--model", default=DEFAULT_MODEL, help="AI model for alt-text generation")
     parser.add_argument("--context", help="Additional notes to include when generating alt-text")
+    parser.add_argument("--force", action="store_true", help="Process all images even if they are verified")
     args = parser.parse_args()
     
-    process_directory(args.directory, args.model, args.context)
+    if not AUTH_TOKEN:
+        print("❌ Error: AUTH_TOKEN not set. Use export AUTH_TOKEN=your_token or add to .env file")
+        return
+        
+    process_directory(args.directory, args.model, args.context, args.force)
 
 if __name__ == "__main__":
     main()
