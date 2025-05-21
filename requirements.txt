@@ -3,3 +3,4 @@ pillow
 ollama
 pyyaml 
 requests
+python-dotenv
