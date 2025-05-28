@@ -51,6 +51,11 @@ This Python script generates image captions using different large language model
    ollama pull llava-llama3
    ollama pull llama3.2-vision:11b-instruct-q8_0
    ollama pull minicpm-v
+   ollama pull qwen2.5vl:7b
+   ollama pull qwen2.5vl:32b
+   ollama pull gemma3:12b
+   ollama pull gemma3:27b
+   ollama pull mistral-small3.1:24b
    ```
 
 # Upgrading
@@ -94,6 +99,11 @@ This tool supports all vision and multi-modal models available through the `llm`
 - LLaVA Llama3 - llava-llama3
 - Llama 3.2 Vision (11B) - llama3.2-vision:11b-instruct-q8_0
 - MiniCPM-V - minicpm-v
+- Qwen 2.5-VL (7B) - qwen2.5vl-7b
+- Qwen 2.5-VL (32B) - qwen2.5vl-32b
+- Gemma 3 (12B) - gemma3:12b
+- Gemma 3 (27B) - gemma3:27b
+- Mistral Small 3.1 (24B) - mistral-small-24b
 
 
 ## Usage
