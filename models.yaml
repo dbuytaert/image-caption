@@ -4,9 +4,6 @@ claude-3-sonnet:
   model: anthropic/claude-3-sonnet-20240229
   prompt: You are a helpful alt-text generator assisting visually impaired users. Generate a clear and concise caption (15-30 words) that highlights the most important subject and action. Focus only on essential details, avoiding unnecessary background elements. Use simple, everyday language and avoid overly descriptive or poetic words.
   provider: anthropic
-  settings:
-    max_tokens: 75
-    temperature: 0.1
 
 chatgpt-4o-latest:
   deployment: cloud
@@ -14,10 +11,13 @@ chatgpt-4o-latest:
   model: chatgpt-4o-latest
   prompt: You are a helpful alt-text generator assisting visually impaired users. Generate a clear and concise caption (15-30 words) that highlights the most important subject and action. Focus only on essential details, avoiding unnecessary background elements. Use simple, everyday language and avoid overly descriptive or poetic words.
   provider: openai
-  settings:
-    max_tokens: 75
-    temperature: 0.1
-    top_p: 0.7
+
+gpt-5:
+  deployment: cloud
+  description: GPT-5 - Most advanced OpenAI model
+  model: gpt-5
+  prompt: You are a helpful alt-text generator assisting visually impaired users. Generate a clear and concise caption (15-30 words) that highlights the most important subject and action. Focus only on essential details, avoiding unnecessary background elements. Use simple, everyday language and avoid overly descriptive or poetic words.
+  provider: openai
 
 llama-vision:
   deployment: local
@@ -79,10 +79,6 @@ pixtral-12b:
   model: mistral/pixtral-12b-latest
   prompt: You are a helpful alt-text generator assisting visually impaired users. Generate a clear and concise caption (15-30 words) that highlights the most important subject and action. Focus only on essential details, avoiding unnecessary background elements. Use simple, everyday language and avoid overly descriptive or poetic words.
   provider: mistral
-  settings:
-    max_tokens: 75
-    temperature: 0.1
-    top_p: 0.7
 
 pixtral-large:
   deployment: cloud
@@ -90,10 +86,6 @@ pixtral-large:
   model: mistral/pixtral-large-latest
   prompt: You are a helpful alt-text generator assisting visually impaired users. Generate a clear and concise caption (15-30 words) that highlights the most important subject and action. Focus only on essential details, avoiding unnecessary background elements. Use simple, everyday language and avoid overly descriptive or poetic words.
   provider: mistral
-  settings:
-    max_tokens: 75
-    temperature: 0.1
-    top_p: 0.7
 
 qwen2.5vl-7b:
   deployment: local
@@ -143,6 +135,17 @@ mistral-3.1-24b:
   deployment: local
   description: Mistral Small 3.1 (24B)
   model: mistral-small3.1:24b
+  prompt: You are a helpful alt-text generator assisting visually impaired users. Generate a clear and concise caption (15-30 words) that highlights the most important subject and action. Focus only on essential details, avoiding unnecessary background elements. Use simple, everyday language and avoid overly descriptive or poetic words.
+  provider: ollama
+  settings:
+    temperature: 0.1
+    top_k: 40
+    top_p: 0.7
+
+llama4-16x17b:
+  deployment: local
+  description: Llama 4 (16x17B)
+  model: llama4:16x17b
   prompt: You are a helpful alt-text generator assisting visually impaired users. Generate a clear and concise caption (15-30 words) that highlights the most important subject and action. Focus only on essential details, avoiding unnecessary background elements. Use simple, everyday language and avoid overly descriptive or poetic words.
   provider: ollama
   settings:
