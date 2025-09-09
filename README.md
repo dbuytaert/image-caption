@@ -108,6 +108,8 @@ This tool supports all vision and multi-modal models available through the `llm`
 
 ## Usage
 
+### Individual image updates (caption.py)
+
 List available models:
 ```bash
 ./caption.py --list
@@ -136,28 +138,32 @@ Additional options:
 --debug    # Show detailed debug information
 ```
 
-## Output format
+### Batch image updates (update-images.py)
 
-Standard output:
-```json
-{
-  "image": "path/to/image.jpg",
-  "captions": {
-    "model-name": "Generated caption.",
-    "another-model": "Another caption."
-  }
-}
+First, set up authentication token:
+```bash
+export AUTH_TOKEN=your_api_token
+   
+# Or create a .env file with:
+# AUTH_TOKEN=your_api_token
 ```
 
-With timing information (`--time` flag):
-```json
-{
-  "image": "path/to/image.jpg",
-  "captions": {
-    "model-name": {
-      "caption": "Generated caption.",
-      "time": 2
-    }
-  }
-}
+Process an entire directory of images to generate alt-text and update titles:
+```bash
+./update-images.py album-name
+```
+
+Use a specific model:
+```bash
+./update-images.py album-name --model chatgpt-4o-latest
+```
+
+Add contextual information for better alt-text generation:
+```bash
+./update-images.py album-name --context "Event: DrupalCon Barcelona 2024"
+```
+
+Force update even for verified images:
+```bash
+./update-images.py album-name --force
 ```
