@@ -16,8 +16,8 @@ load_dotenv()
 BASE_DIR = Path("/Users/dries/Dropbox/Personal/Website/images")
 BASE_URL = "https://dri.es/album/"
 AUTH_TOKEN = os.getenv("AUTH_TOKEN")
-DEFAULT_MODEL = "chatgpt-4o-latest"
-DELAY_BETWEEN_REQUESTS = 2  # seconds
+DEFAULT_MODEL = "gpt-5.2"
+DELAY_BETWEEN_REQUESTS = 5  # seconds
 
 def get_image_metadata(image_path):
     """Fetch metadata for an image from the website."""
@@ -97,7 +97,7 @@ def generate_title(image_path, model=DEFAULT_MODEL):
     """Generate a title for an image using llm command."""
     try:
         result = subprocess.run(
-            ["llm", "prompt", "-m", "chatgpt-4o-latest", "-s", "0", f"Generate a short, descriptive title for this image: {image_path.name}"],
+            ["llm", "prompt", "-m", model, "-s", "0", f"Generate a short, descriptive title for this image: {image_path.name}"],
             capture_output=True,
             text=True,
             check=True
@@ -115,7 +115,7 @@ def generate_title(image_path, model=DEFAULT_MODEL):
         print(f"   Stderr: {e.stderr}")
         return f"Error: {e}"
     
-def format_title(title):
+def format_title(title, model=DEFAULT_MODEL):
     """Format title using sentence case, proper nouns, and connecting words."""
         
     prompt = f"""Convert this title to sentence case: "{title}"
@@ -133,7 +133,7 @@ Output title only."""
 
     try:
         result = subprocess.run(
-            ["llm", "prompt", "-m", "chatgpt-4o-latest", "-s", "0", prompt],
+            ["llm", "prompt", "-m", model, "-s", "0", prompt],
             capture_output=True,
             text=True,
             check=True
@@ -243,16 +243,17 @@ def process_directory(directory, model=DEFAULT_MODEL, notes=None, force=False):
             
         print(f"  🟢 AI-suggested alt-text: {new_alt_text}")
         
+        formatted_title = None
         if title:
-            formatted_title = format_title(title)
+            formatted_title = format_title(title, model=model)
             if formatted_title != title:
                 print(f"  🟢 AI-suggested title: {formatted_title}")
             else:
                 print(f"  ℹ️ Keeping existing title: {title}")
 
         # Only update the photo if there are actual changes
-        if new_alt_text or formatted_title != title:
-           update_image_metadata(image_path, new_alt_text, formatted_title)
+        if new_alt_text or (formatted_title and formatted_title != title):
+            update_image_metadata(image_path, new_alt_text, formatted_title if formatted_title != title else None)
             
 def main():
     parser = argparse.ArgumentParser(description="Generate and update image alt-texts and titles.")

@@ -1,7 +1,7 @@
-claude-3-sonnet:
+claude-sonnet-4-6:
   deployment: cloud
-  description: Claude 3 Sonnet
-  model: anthropic/claude-3-sonnet-20240229
+  description: Claude Sonnet 4.6
+  model: anthropic/claude-sonnet-4-6
   prompt: You are a helpful alt-text generator assisting visually impaired users. Generate a clear and concise caption (15-30 words) that highlights the most important subject and action. Focus only on essential details, avoiding unnecessary background elements. Use simple, everyday language and avoid overly descriptive or poetic words.
   provider: anthropic
 
@@ -14,8 +14,15 @@ chatgpt-4o-latest:
 
 gpt-5:
   deployment: cloud
-  description: GPT-5 - Most advanced OpenAI model
+  description: GPT-5
   model: gpt-5
+  prompt: You are a helpful alt-text generator assisting visually impaired users. Generate a clear and concise caption (15-30 words) that highlights the most important subject and action. Focus only on essential details, avoiding unnecessary background elements. Use simple, everyday language and avoid overly descriptive or poetic words.
+  provider: openai
+
+gpt-5.2:
+  deployment: cloud
+  description: GPT-5.2
+  model: gpt-5.2
   prompt: You are a helpful alt-text generator assisting visually impaired users. Generate a clear and concise caption (15-30 words) that highlights the most important subject and action. Focus only on essential details, avoiding unnecessary background elements. Use simple, everyday language and avoid overly descriptive or poetic words.
   provider: openai
 
